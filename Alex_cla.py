@@ -18,14 +18,13 @@ import csv
 
 PICKLE_PATH = "corel5k/alex_net.pkl"
 
-rate = 1.0
-weight_p = 1.0
-dim = 160
+rate = 0.01
+dim = 1000
 
 n_epoch = 10
 batchsize = 100
 
-L = np.load('./L/L_%.2f/L_%d.npy' % (weight_p, dim))
+L=np.load('./L_B/WL_%d.npy'%(dim))
 L = L[np.newaxis, :].astype(np.float32)
 L_origin = L
 
@@ -107,8 +106,8 @@ def forward(x_data, y_data, L=L, batchsize=batchsize):
     term = (F.sum(F.batch_matmul(F.batch_matmul(y_f, L, transa=True), y_ft))) / batchsize
 
     sce = F.sigmoid_cross_entropy(y, t)
-    E=sce+(rate*term)
-    #E = sce
+    #E=sce+(rate*term)
+    E = sce
     return E, sce, term, y_f
 
 
@@ -124,8 +123,9 @@ def cul_acc(x_data, y_data, threshold=0.500):
 
 
 # setup optimizer
-optimizer = optimizers.Adam(alpha=0.001)
+#optimizer = optimizers.Adam(alpha=0.001)
 #optimizer = optimizers.SGD(lr=0.1)
+optimizer = optimizers.MomentumSGD(lr=0.1, momentum=0.9)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer_hooks.WeightDecay(0.001))
 
@@ -157,9 +157,11 @@ for epoch in range(1, n_epoch + 1):
 
         # optimizer.zero_grads()
         loss, sce, GFHF, pred = forward(x_batch, y_batch)
-        #print("fffffffffffffffffffffff", loss, sce, pred)
+
+        model.cleargrads()
         loss.backward()
-        #optimizer.update()
+        optimizer.update()
+
         sum_loss += float(cuda.to_cpu(loss.data)) * batchsize
         sum_sce += float(cuda.to_cpu(sce.data)) * batchsize
         sum_term += float(cuda.to_cpu(GFHF.data)) * batchsize
