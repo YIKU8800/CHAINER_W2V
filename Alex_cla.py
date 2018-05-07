@@ -21,7 +21,7 @@ PICKLE_PATH = "corel5k/alex_net.pkl"
 rate = 0.01
 dim = 1000
 
-n_epoch = 10
+n_epoch = 20000
 batchsize = 100
 
 L=np.load('./L_B/WL_%d.npy'%(dim))
@@ -111,21 +111,26 @@ def forward(x_data, y_data, L=L, batchsize=batchsize):
     return E, sce, term, y_f
 
 
-def cul_acc(x_data, y_data, threshold=0.500):
+def cul_acc(x_data, y_data, threshold=0.100):
     output = np.array(x_data).astype(np.float32)
 
     output = output.reshape(len(y_data) * 260, )
     target = y_data.reshape(len(y_data) * 260, )
     output[np.where(output > threshold)[0]] = 1
     output[np.where(output < threshold)[0]] = 0
+
+    output = np.array(output).astype(np.int32)
+
     correct = np.count_nonzero(output == target)
-    return float(correct) / (len(y_data) * 260)
+
+    acc = float(correct) / (len(y_data) * 260)
+
+    return acc
 
 
 # setup optimizer
-#optimizer = optimizers.Adam(alpha=0.001)
+optimizer = optimizers.Adam(alpha=0.001)
 #optimizer = optimizers.SGD(lr=0.1)
-optimizer = optimizers.MomentumSGD(lr=0.1, momentum=0.9)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer_hooks.WeightDecay(0.001))
 
@@ -187,8 +192,8 @@ for epoch in range(1, n_epoch + 1):
         sum_term += float(cuda.to_cpu(GFHF.data)) * batchsize
         pred = cuda.to_cpu(pred.data)
     #        print np.max(pred)
-    acc = cul_acc(pred, y_batch)
-    sum_acc += acc * batchsize
+        acc = cul_acc(pred, y_batch)
+        sum_acc += acc * batchsize
     print('test train loss={},sce={},term={},acc={}'.format(sum_loss / N, sum_sce / N, sum_term / N, sum_acc / N))
     #    loss_val.append((sum_sce+sum_term)/N)
     loss_val.append(sum_loss / N)
@@ -214,10 +219,11 @@ for epoch in range(1, n_epoch + 1):
         sum_loss += float(cuda.to_cpu(loss.data))
         sum_sce += float(cuda.to_cpu(sce.data))
         sum_term += float(cuda.to_cpu(GFHF.data))
-    pred = cuda.to_cpu(pred.data)
+        pred = cuda.to_cpu(pred.data)
 
-    acc = cul_acc(pred, y_batch)
-    sum_acc += acc
+        acc = cul_acc(pred, y_batch)
+        sum_acc += acc
+
     print('test test loss={},sce={},term={},acc={}'.format(sum_loss / N_test, sum_sce / N_test, sum_term / N_test,
                                                            sum_acc / N_test))
     #    loss_val.append((sum_sce+sum_term)/N)
