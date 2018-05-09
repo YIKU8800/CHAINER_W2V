@@ -18,10 +18,10 @@ import csv
 
 PICKLE_PATH = "corel5k/alex_net.pkl"
 
-rate = 0.01
+rate = 0.001
 dim = 1000
 
-n_epoch = 20000
+n_epoch = 500
 batchsize = 100
 
 L=np.load('./L_B/WL_%d.npy'%(dim))
@@ -45,6 +45,8 @@ model = chainer.Chain(conv1=CL.Convolution2D(3,  96, 11, stride=4),
 
 ## copy parameter
 with open(PICKLE_PATH, "rb") as pkl_file:
+    print("loading original model.......................")
+
     original_model = pickle.load(pkl_file)
 
     model.conv1.W.data = original_model.conv1.W.data
@@ -129,8 +131,8 @@ def cul_acc(x_data, y_data, threshold=0.100):
 
 
 # setup optimizer
-optimizer = optimizers.Adam(alpha=0.001)
-#optimizer = optimizers.SGD(lr=0.1)
+#optimizer = optimizers.Adam(alpha=0.0001)
+optimizer = optimizers.SGD(lr=1)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer_hooks.WeightDecay(0.001))
 
@@ -237,7 +239,8 @@ for epoch in range(1, n_epoch + 1):
         writer.writerow(loss_val)
     """
 model.to_cpu()
-# serializers.save_npz('./model_%.6f_%.2f_%d.model'%(rate,weight_p,dim),model)
 
-print("saving model......................")
-pickle.dump(model, open(PICKLE_PATH, "wb"))
+serializers.save_npz('./model/w2v_model_%.6f_%d.model'%(rate,dim), model)
+
+#print("saving model......................")
+#pickle.dump(model, open(PICKLE_PATH, "wb"))
